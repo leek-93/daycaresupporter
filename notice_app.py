@@ -2,6 +2,23 @@
 
 import os, json, datetime
 import tkinter as tk
+import sys
+
+def _app_base_dir():
+    # PyInstaller 실행 파일 내부/외부 모두 대응
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        # onefile 모드에서 임시 해제 폴더
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
+APP_DIR   = _app_base_dir()
+DATA_DIR  = os.path.join(os.getenv("LOCALAPPDATA", APP_DIR), "ChildcareNoticeMaker")
+OUT_DIR   = os.path.join(DATA_DIR, "output")        # 기존 OUT_DIR 대체
+STATE_FILE = os.path.join(DATA_DIR, "rotation_state.json")  # 기존 STATE_FILE 대체
+
+os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(OUT_DIR,  exist_ok=True)
+
 from tkinter import ttk, messagebox, filedialog
 
 APP_NAME   = "Childcare Notice Maker"
