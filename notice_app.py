@@ -1,8 +1,8 @@
 # notice_app.py (single file, refactored)
 
-import os, json, datetime
+import os, json, datetime, re, subprocess
 import tkinter as tk
-import sys
+import sys;
 
 def _app_base_dir():
     # PyInstaller 실행 파일 내부/외부 모두 대응
@@ -22,8 +22,6 @@ os.makedirs(OUT_DIR,  exist_ok=True)
 from tkinter import ttk, messagebox, filedialog
 
 APP_NAME   = "Childcare Notice Maker"
-OUT_DIR    = "output"
-STATE_FILE = "rotation_state.json"
 
 # -------------------- python-docx (optional) --------------------
 try:
@@ -71,27 +69,27 @@ SEASON_LINES = {
 }
 
 INTRO_VARIANTS = {
-    "Field Trip": [
+    "체험학습": [
         "아이들이 직접 보고 듣고 만지며 배우는 시간이 될 수 있도록 차분히 준비했습니다. 안전을 가장 먼저 생각하며, 아이 한 명 한 명의 속도에 맞춰 살피겠습니다.",
         "자연과 사회를 가까이에서 경험하는 하루입니다. 친구와 배려하고 질서를 지키는 작은 습관까지 함께 익힐 수 있도록 교사들이 곁에서 세심히 도우겠습니다.",
         "설렘 가득한 마음이 배움으로 이어지도록 일정과 동선을 꼼꼼히 구성했습니다. 무사히 다녀올 수 있도록 가정의 격려와 협조를 부탁드립니다."
     ],
-    "Class Observation": [
+    "학부모 참관 수업": [
         "평소 교실에서의 배움과 놀이가 어떻게 흐르는지, 아이들이 어떤 표정으로 하루를 보내는지 천천히 살펴보실 수 있도록 준비했습니다.",
         "가정과 원이 같은 마음으로 아이를 바라볼 때 성장의 결이 고와집니다. 편안한 마음으로 오셔서 작은 변화도 함께 기뻐해 주세요.",
         "교사와 친구들 사이에서 나누는 따뜻한 상호작용을 가까이에서 보시며 가정과의 연계에 도움이 되길 바랍니다."
     ],
-    "Picnic": [
+    "소풍": [
         "계절의 숨결을 온몸으로 느끼며 자연 속에서 마음껏 뛰놀 수 있도록 소풍을 마련했습니다. 물 한 모금, 모자 하나까지 정성껏 챙기겠습니다.",
         "친구와 함께 걷고 나누는 시간이 예절과 배려를 단단히 세웁니다. 안전한 이동과 충분한 휴식으로 편안한 하루가 되게 하겠습니다.",
         "작은 잎 하나, 바람 한 줄기에도 놀라고 배우는 때입니다. 아이들의 기쁨이 오래 기억으로 남도록 세심히 동행하겠습니다."
     ],
-    "Health/Immunization": [
+    "건강/예방접종": [
         "건강은 하루의 배움과 생활을 지탱하는 첫걸음입니다. 필요한 확인을 차분히 진행하고자 하오니 몇 가지 안내에 협조 부탁드립니다.",
         "알레르기·복용 약 등 중요한 정보는 교실에서 곧바로 돌봄에 반영됩니다. 아이에게 가장 안전한 환경이 될 수 있도록 함께 살펴 주세요.",
         "작은 증상도 소중히 듣고 살피겠습니다. 궁금하신 점은 언제든 편히 말씀해 주시면 가정과 상의하며 좋은 선택을 하겠습니다."
     ],
-    "General Notice": [
+    "운영 안내": [
         "늘 아이들의 하루를 믿고 응원해 주셔서 고맙습니다. 필요한 소식만 차분히 정리해 드리오니 천천히 확인 부탁드립니다.",
         "가정과 원이 한마음으로 아이를 바라볼 때 하루가 더 따뜻해집니다. 안내를 살펴보시고 의견 주시면 더 세심히 반영하겠습니다.",
         "작은 약속을 지키는 힘이 큰 성장을 만듭니다. 투명하게 소통하며 믿음을 이어가겠습니다."
@@ -142,7 +140,7 @@ def build_notice(params):
     state = load_state()
     season = season_of(d)
     season_line = pick_rotating(f"SEASON_{season}", SEASON_LINES[season], state)
-    intro_line  = pick_rotating(params["event_type"], INTRO_VARIANTS.get(params["event_type"], INTRO_VARIANTS["General Notice"]), state)
+    intro_line  = pick_rotating(params["event_type"], INTRO_VARIANTS.get(params["event_type"], INTRO_VARIANTS["운영 안내"]), state)
     save_state(state)
 
     long_intro = (
@@ -164,7 +162,7 @@ def build_notice(params):
         f"{today}\n{params['center']} 원장 {params['contact_name']} 드림"
     )
 
-    if et == "Class Observation":
+    if et == "학부모 참관 수업":
         body = (
             f"{head}\n\n{long_intro}\n"
             "■ 참관 수업 개요\n"
@@ -180,7 +178,7 @@ def build_notice(params):
             "• 링크/회신 방법: (원에서 안내한 방식으로 회신)\n"
             f"{foot}"
         )
-    elif et == "Field Trip":
+    elif et == "체험학습":
         body = (
             f"{head}\n\n{long_intro}\n"
             "■ 체험학습 개요\n"
@@ -195,7 +193,7 @@ def build_notice(params):
             "• 링크/제출 방법: (원에서 안내한 방식으로 제출)\n"
             f"{foot}"
         )
-    elif et == "Picnic":
+    elif et == "소풍":
         body = (
             f"{head}\n\n{long_intro}\n"
             "■ 소풍 개요\n"
@@ -210,7 +208,7 @@ def build_notice(params):
             "• 링크/제출 방법: (원에서 안내한 방식으로 제출)\n"
             f"{foot}"
         )
-    elif et == "Health/Immunization":
+    elif et == "건강/예방접종":
         body = (
             f"{head}\n\n{long_intro}\n"
             "■ 진행 안내\n"
@@ -332,7 +330,7 @@ def build_styled_doc(content:str, output_path:str, header_image_path:str=None):
     run.font.size = Pt(TITLE_SIZE)
     run.bold = True
     _set_font_all_faces(run._element, BASE_FONT)
-    p_title.paragraph_format.space_after = Pt(6)
+    p_title.paragraph_format.space_after = Pt(1)
 
     add_rule(doc)
 
@@ -403,7 +401,7 @@ class App(tk.Tk):
         self.contact_name   = tk.StringVar(value="원장 김OO")
         self.contact_phone  = tk.StringVar(value="010-1234-0000")
 
-        self.event_type     = tk.StringVar(value="Field Trip")
+        self.event_type     = tk.StringVar(value="체험학습")
         self.event_name     = tk.StringVar(value="체험학습 안내")
         self.date           = tk.StringVar(value=datetime.date.today().strftime("%Y-%m-%d"))
         self.start          = tk.StringVar(value="09:30")
@@ -430,7 +428,12 @@ class App(tk.Tk):
 
         ttk.Label(frm, text="행사유형", width=18, anchor="e").grid(row=r, column=0, padx=6, pady=4, sticky="e")
         cb = ttk.Combobox(frm, textvariable=self.event_type, values=list(INTRO_VARIANTS.keys()), width=34, state="readonly")
-        cb.grid(row=r, column=1, sticky="w"); r+=1
+        cb.bind("<<ComboboxSelected>>", lambda e: self.load_defaults_for_type())
+        cb.grid(row=r, column=1, sticky="w")
+
+        ttk.Button(frm, text="기본값 불러오기", command=self.load_defaults_for_type)\
+            .grid(row=r, column=2, padx=6, sticky="w")
+        r += 1
 
         row("행사명/제목", self.event_name)
         row("어린이집 이름", self.center)
@@ -456,19 +459,81 @@ class App(tk.Tk):
         r += 1
 
         # 버튼들
-        btns = ttk.Frame(frm); btns.grid(row=r, column=0, columnspan=4, pady=12)
+        btns = ttk.Frame(frm); btns.grid(row=r, column=0, columnspan=4, pady=12, sticky="w")
+
         ttk.Button(btns, text="문안 생성 (TXT)", command=self.make_txt).grid(row=0, column=0, padx=6)
 
         self.btn_docx = ttk.Button(btns, text="문안 + DOCX 생성", command=self.make_docx)
         self.btn_docx.grid(row=0, column=1, padx=6)
+
+        ttk.Button(btns, text="출력 폴더 열기", command=self.open_output_dir).grid(row=0, column=2, padx=6)
+        ttk.Button(btns, text="문안 복사", command=self.copy_preview).grid(row=0, column=3, padx=6)
+
         if not DOCX_AVAILABLE:
             self.btn_docx.state(["disabled"])
             ttk.Label(frm, foreground="red",
-                      text="※ python-docx 미설치: 'pip install python-docx' 후 DOCX 버튼 사용 가능").grid(row=r+1, column=0, columnspan=4, sticky="w")
+                    text="※ python-docx 미설치: 'pip install python-docx' 후 DOCX 버튼 사용 가능"
+            ).grid(row=r+1, column=0, columnspan=4, sticky="w")
 
+        r += 2  # 버튼행(+ 경고행)을 차지했으니 r 보정
+
+        # 회전 문구 초기화 버튼 (아래 줄)
+        btns2 = ttk.Frame(frm); btns2.grid(row=r, column=0, columnspan=4, pady=(0,12), sticky="w")
+        ttk.Button(btns2, text="회전 문구 초기화", command=self.reset_rotation).grid(row=0, column=0, padx=6)
+        r += 1
+
+        # 상태바
         self.status = tk.StringVar(value="준비됨")
         ttk.Label(self, textvariable=self.status, relief="sunken", anchor="w").pack(fill="x", padx=12, pady=(0,8))
 
+    def load_defaults_for_type(self):
+        t = self.event_type.get()
+        # 간단 예시: 원장님 운영 방식에 맞춰 값 바꾸세요.
+        if t == "체험학습":
+            self.event_name.set("체험학습 안내")
+            self.transport.set("버스")
+            self.materials.set("물통, 모자")
+            self.rain_plan.set("우천 시 실내 활동")
+        elif t == "소풍":
+            self.event_name.set("봄 소풍 안내")
+            self.transport.set("도보 또는 버스")
+            self.materials.set("돗자리, 물통, 간편복")
+            self.rain_plan.set("우천 시 실내 신체활동")
+        elif t == "학부모 참관 수업":
+            self.event_name.set("학부모 참관 수업 안내")
+            self.materials.set("실내화")
+        elif t == "건강/예방접종":
+            self.event_name.set("건강/예방접종 안내")
+            self.materials.set("건강수첩")
+        else:  # General Notice
+            self.event_name.set("원 운영 안내")
+            self.materials.set("세부 내용 본문 참고")
+
+    def open_output_dir(self):
+        try:
+            os.makedirs(OUT_DIR, exist_ok=True)
+            subprocess.Popen(f'explorer "{OUT_DIR}"')  # Windows 탐색기 열기
+        except Exception as e:
+            messagebox.showerror(APP_NAME, str(e))
+
+    def copy_preview(self):
+        try:
+            content = build_notice(self.collect())
+            self.clipboard_clear()
+            self.clipboard_append(content)
+            self.update()  # 클립보드 동기화
+            messagebox.showinfo(APP_NAME, "문안이 클립보드에 복사되었습니다.\n(카카오톡/밴드 등에 붙여넣기 하세요)")
+        except Exception as e:
+            messagebox.showerror(APP_NAME, str(e))
+
+    def reset_rotation(self):
+        try:
+            if os.path.exists(STATE_FILE):
+                os.remove(STATE_FILE)
+            messagebox.showinfo(APP_NAME, "회전 문구가 초기화되었습니다.")
+        except Exception as e:
+            messagebox.showerror(APP_NAME, str(e))
+                
     def collect(self):
         return dict(
             center=self.center.get().strip(),
@@ -491,12 +556,14 @@ class App(tk.Tk):
 
     def _save_paths(self, title_base):
         os.makedirs(OUT_DIR, exist_ok=True)
-        safe = "".join(c for c in title_base if c.isalnum() or c in ("_","-"," ")).rstrip()
+        safe = re.sub(r"\s+", "_", "".join(c for c in title_base if c.isalnum() or c in ("_","-"," "))).strip("_")
         txt_path  = os.path.join(OUT_DIR, f"{safe}.txt")
         docx_path = os.path.join(OUT_DIR, f"{safe}.docx")
         return txt_path, docx_path
 
     def make_txt(self):
+        if not self._validate_inputs():
+            return
         params = self.collect()
         try:
             content = build_notice(params)
@@ -510,8 +577,22 @@ class App(tk.Tk):
             messagebox.showerror(APP_NAME, str(e))
 
     def make_docx(self):
+        if not self._validate_inputs():
+            return
         params = self.collect()
         try:
+            try:
+                from docx import Document
+                from docx.shared import Pt, Cm
+                from docx.enum.text import WD_ALIGN_PARAGRAPH
+                from docx.enum.section import WD_ORIENT
+                from docx.oxml import OxmlElement
+                from docx.oxml.ns import qn
+                DOCX_AVAILABLE = True
+            except Exception as e:
+                DOCX_AVAILABLE = False
+                print("DOCX import failed:", repr(e))  # ← 콘솔에 원인 출력
+
             if not DOCX_AVAILABLE:
                 raise RuntimeError("python-docx 미설치: 'pip install python-docx' 실행 후 다시 시도해 주세요.")
             content = build_notice(params)
@@ -536,7 +617,36 @@ class App(tk.Tk):
         )
         if path:
             self.header_image_path.set(path)
+    
+    def _valid_date(self, s):
+        return re.fullmatch(r"\d{4}-\d{2}-\d{2}", s or "") is not None
+
+    def _valid_time(self, s):
+        if not s: return True  # 비워둘 수 있게
+        return re.fullmatch(r"\d{2}:\d{2}", s) is not None
+
+    def _valid_deadline(self, s):
+        # "YYYY-MM-DD HH:MM" 또는 빈값 허용
+        if not s: return True
+        return re.fullmatch(r"\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}", s) is not None
+
+    def _validate_inputs(self):
+        if not self._valid_date(self.date.get()):
+            messagebox.showwarning(APP_NAME, "일자 형식이 올바르지 않습니다.\n예) 2025-03-02")
+            return False
+        if not self._valid_time(self.start.get()):
+            messagebox.showwarning(APP_NAME, "시작시간 형식이 올바르지 않습니다.\n예) 09:30")
+            return False
+        if not self._valid_time(self.end.get()):
+            messagebox.showwarning(APP_NAME, "종료시간 형식이 올바르지 않습니다.\n예) 14:00")
+            return False
+        if not self._valid_deadline(self.rsvp_deadline.get()):
+            messagebox.showwarning(APP_NAME, "회신마감 형식이 올바르지 않습니다.\n예) 2025-03-05 23:59 (또는 빈칸)")
+            return False
+        return True
 
 # -------------------- 메인 --------------------
 if __name__ == "__main__":
     App().mainloop()
+
+# exe 파일 생성 py -3.13 -m PyInstaller notice_app.py --onefile --windowed --name NoticeMaker --hidden-import lxml.etree --hidden-import lxml._elementpath --add-data "C:\Users\admin\AppData\Local\Programs\Python\Python313\Lib\site-packages\docx\templates\default.docx;docx\templates"
