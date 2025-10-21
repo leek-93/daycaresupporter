@@ -19,11 +19,13 @@ This project was originally developed to support my family’s daycare in Korea 
 
 ## Screenshots
 - UI form
+<img width="761" height="753" alt="Image" src="https://github.com/user-attachments/assets/f425feb1-ebc2-491c-ab5a-fe05b1797814" />
 
 - DOCX output
+<img width="447" height="669" alt="Image" src="https://github.com/user-attachments/assets/a6ca0fd0-a2c1-4bf8-a5d7-bbed8f4e251e" />
 
 - Banner example(optional)
-
+<img width="1536" height="1024" alt="Image" src="https://github.com/user-attachments/assets/dfd62239-126f-4c31-9eb5-a7cd33047363" />
 
 ## Tech Stack
 
